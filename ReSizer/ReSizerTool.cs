@@ -23,7 +23,7 @@ namespace ReSizer
             var vLoadedFileJson = File.ReadAllText(viOSizesFile);
             var viOsSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vLoadedFileJson);
             foreach (var vSingleSize in viOsSizes)
-            { chkLstiOS.Items.Add(vSingleSize.ImageName);}
+            { chkLstiOS.Items.Add(vSingleSize.ImageName); }
             var vDroidSizesFile = vOutPath + @"\SizeJsons\AndroidSizes.json";
             var vDroidSizeJson = File.ReadAllText(vDroidSizesFile);
             var vDroidSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vDroidSizeJson);
@@ -39,7 +39,7 @@ namespace ReSizer
         {
             if (string.IsNullOrEmpty(lblCustomImgPath.Text.Trim()))
             { MessageBox.Show("Please Select the Base Image it's Mandatory"); }
-            else if(string.IsNullOrEmpty(txtCustomWidth.Text.Trim()))
+            else if (string.IsNullOrEmpty(txtCustomWidth.Text.Trim()))
             {
                 MessageBox.Show("Please Enter Width it's Mandatory");
             }
@@ -47,7 +47,7 @@ namespace ReSizer
             {
                 MessageBox.Show("Please Enter Height it's Mandatory");
             }
-             
+
             var sBaseImagePath = lblCustomImgPath.Text.Trim();
             var vOutPath = AppDomain.CurrentDomain.BaseDirectory;
             var vFileName = Path.GetFileNameWithoutExtension(sBaseImagePath);
@@ -74,9 +74,10 @@ namespace ReSizer
         {
             var vFileOpener = new OpenFileDialog();
             vFileOpener.ShowDialog();
-            lblBaseImagePath.Text = vFileOpener.FileName;   
+            lblBaseImagePath.Text = vFileOpener.FileName;
         }
-        private void TestImageCreation(string sBaseImagePath) {
+        private void TestImageCreation(string sBaseImagePath)
+        {
             var vOutPath = AppDomain.CurrentDomain.BaseDirectory;
             var log = false; var verbose = false; var quiet = false;
             Logger.Init(vOutPath, log, verbose, quiet);
@@ -86,8 +87,8 @@ namespace ReSizer
             Directory.CreateDirectory(viOSOutputPath);
             Logger.WriteVerbose("Created directory {0} for iOS Images", viOSOutputPath);
             var vImageName = "58X58";
-            var vWidth = 58;var vHeight=58;
-            var vNewImageName = viOSOutputPath + "\\" + vImageName + ".png";          
+            var vWidth = 58; var vHeight = 58;
+            var vNewImageName = viOSOutputPath + "\\" + vImageName + ".png";
             var vNewIMage = Scale(vWidth, vHeight, sBaseImagePath);
             vNewIMage.Save(vNewImageName);
             MessageBox.Show("Image Created");
@@ -99,7 +100,7 @@ namespace ReSizer
             var vFileName = Path.GetFileNameWithoutExtension(sBaseImagePath);
             var vImageOutPath = vOutPath + @"\" + vFileName;
             Directory.CreateDirectory(vOutPath);
-            var log = false;  var verbose = false;  var quiet = false;
+            var log = false; var verbose = false; var quiet = false;
             Logger.Init(vOutPath, log, verbose, quiet);
             Logger.WriteLine("Begin Resizing Images!");
             Logger.WriteVerbose("Writing files to {0}", vOutPath);
@@ -111,18 +112,62 @@ namespace ReSizer
 
                 var viOSizesFile = vOutPath + @"\SizeJsons\iOSizes.json";
                 var vLoadedFileJson = File.ReadAllText(viOSizesFile);
-                var viOsSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vLoadedFileJson);
+                var viOsSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vLoadedFileJson).OrderBy(x => x.Width);
                 for (int iCount = 0; iCount < chkLstiOS.CheckedItems.Count; iCount++)
                 {
                     var vSelSize = chkLstiOS.CheckedItems[iCount].ToString();
-                    var vSelectedImage = (from SelImage in viOsSizes where SelImage.ImageName == vSelSize
+                    var vSelectedImage = (from SelImage in viOsSizes
+                                          where SelImage.ImageName == vSelSize
                                           select SelImage).SingleOrDefault();
                     Logger.WriteVerbose("Creating Image for {0} of iOS Images", vSelSize);
-                    var vNewImageName = viOSOutputPath + "\\" + vSelSize + ".png";
-                    var vNewIMage = Scale(vSelectedImage.Width, vSelectedImage.Height, sBaseImagePath);
+                    var vNewImageName = viOSOutputPath + "\\" + vFileName + vSelectedImage.ImageName + ".png";
+
+                    var width = Convert.ToInt32(vSelectedImage.Width);
+                    var height = Convert.ToInt32(vSelectedImage.Height);
+                    if (!ckbWidth.Checked || !ckbHeight.Checked)
+                    {
+                        var imageBase = Image.FromFile(sBaseImagePath);
+                        if (ckbWidth.Checked)
+                        {
+                            height = width * imageBase.Height / imageBase.Width;
+                        }
+                        else
+                        {
+                            width = height * imageBase.Width / imageBase.Height;
+                        }
+                    }
+
+                    var vNewIMage = Scale(width, height, sBaseImagePath);
                     vNewIMage.Save(vNewImageName);
                     Logger.WriteVerbose("Created Image for {0} of iOS Images", vSelSize);
-                }           
+                }
+
+                if (chkLstiOS.CheckedItems.Count > 0)
+                {
+                    var vSelectedImage = viOsSizes.Last();
+                    Logger.WriteVerbose("Creating Image for last of iOS Images");
+                    var vNewImageName = viOSOutputPath + "\\" + vFileName + ".png";
+
+                    var width = Convert.ToInt32(vSelectedImage.Width);
+                    var height = Convert.ToInt32(vSelectedImage.Height);
+                    if (!ckbWidth.Checked || !ckbHeight.Checked)
+                    {
+                        var imageBase = Image.FromFile(sBaseImagePath);
+                        if (ckbWidth.Checked)
+                        {
+                            height = width * imageBase.Height / imageBase.Width;
+                        }
+                        else
+                        {
+                            width = height * imageBase.Width / imageBase.Height;
+                        }
+                    }
+
+                    var vNewIMage = Scale(width, height, sBaseImagePath);
+                    vNewIMage.Save(vNewImageName);
+                    Logger.WriteVerbose("Created Image for last of iOS Images");
+                }
+
                 lbliOSTitle.Visible = true;
                 lbliOSValue.Text = viOSOutputPath;
                 lbliOSValue.Visible = true;
@@ -135,19 +180,72 @@ namespace ReSizer
 
                 var vDroidSizesFile = vOutPath + @"\SizeJsons\AndroidSizes.json";
                 var vDroidSizeJson = File.ReadAllText(vDroidSizesFile);
-                var vDroidSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vDroidSizeJson);
+                var vDroidSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vDroidSizeJson).OrderBy(x => x.Width);
                 for (int iCount = 0; iCount < chlLstAndroid.CheckedItems.Count; iCount++)
                 {
                     var vSelSize = chlLstAndroid.CheckedItems[iCount].ToString();
                     var vSelectedImage = (from SelImage in vDroidSizes
                                           where SelImage.ImageName == vSelSize
                                           select SelImage).SingleOrDefault();
+
                     Logger.WriteVerbose("Creating Image for {0} of Android Images", vSelSize);
-                    var vNewImageName = vAndroidPath + "\\" + vSelSize + ".png";
-                    var vNewIMage = Scale(vSelectedImage.Width, vSelectedImage.Height, sBaseImagePath);
+
+                    var imagePath = Path.Combine(vAndroidPath, vSelectedImage.Path);
+                    Directory.CreateDirectory(imagePath);
+
+                    var vNewImageName = imagePath + "\\" + vFileName + ".png";
+
+                    var width = Convert.ToInt32(vSelectedImage.Width);
+                    var height = Convert.ToInt32(vSelectedImage.Height);
+                    if (!ckbWidth.Checked || !ckbHeight.Checked)
+                    {
+                        var imageBase = Image.FromFile(sBaseImagePath);
+                        if (ckbWidth.Checked)
+                        {
+                            height = width * imageBase.Height / imageBase.Width;
+                        }
+                        else
+                        {
+                            width = height * imageBase.Width / imageBase.Height;
+                        }
+                    }
+
+                    var vNewIMage = Scale(width, height, sBaseImagePath);
+
                     vNewIMage.Save(vNewImageName);
                     Logger.WriteVerbose("Created Image for {0} of Android Images", vSelSize);
-                }     
+                }
+
+
+                if (chlLstAndroid.CheckedItems.Count > 0)
+                {
+                    var vSelectedImage = vDroidSizes.Last();
+                    Logger.WriteVerbose("Creating Image for last of Android Images");
+
+                    var vNewImageName = vAndroidPath + "\\" + vFileName + ".png";
+
+                    var width = Convert.ToInt32(vSelectedImage.Width);
+                    var height = Convert.ToInt32(vSelectedImage.Height);
+                    if (!ckbWidth.Checked || !ckbHeight.Checked)
+                    {
+                        var imageBase = Image.FromFile(sBaseImagePath);
+                        if (ckbWidth.Checked)
+                        {
+                            height = width * imageBase.Height / imageBase.Width;
+                        }
+                        else
+                        {
+                            width = height * imageBase.Width / imageBase.Height;
+                        }
+                    }
+
+                    var vNewIMage = Scale(width, height, sBaseImagePath);
+
+                    vNewIMage.Save(vNewImageName);
+                    Logger.WriteVerbose("Created Image for last of Android Images");
+                }
+
+
                 lblAndroid.Visible = true;
                 lblAndroidValue.Text = vAndroidPath;
                 lblAndroidValue.Visible = true;
@@ -160,18 +258,67 @@ namespace ReSizer
 
                 var vUwpSizesFile = vOutPath + @"\SizeJsons\UwpSizes.json";
                 var vUwpSizeJson = File.ReadAllText(vUwpSizesFile);
-                var vUwpSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vUwpSizeJson);
+                var vUwpSizes = JsonConvert.DeserializeObject<IEnumerable<AppImage>>(vUwpSizeJson).OrderBy(x => x.Width);
                 for (int iCount = 0; iCount < chkLstUwp.CheckedItems.Count; iCount++)
                 {
                     var vSelSize = chkLstUwp.CheckedItems[iCount].ToString();
                     var vSelectedImage = (from SelImage in vUwpSizes
                                           where SelImage.ImageName == vSelSize
                                           select SelImage).SingleOrDefault();
+
                     Logger.WriteVerbose("Creating Image for {0} of UWP Images", vSelSize);
-                    var vNewImageName = vUwpPath + "\\" + vSelSize + ".png";
-                    var vNewIMage = Scale(vSelectedImage.Width, vSelectedImage.Height, sBaseImagePath);
+                    var vNewImageName = vUwpPath + "\\" + vFileName + vSelectedImage.ImageName + ".png";
+
+                    var width = Convert.ToInt32(vSelectedImage.Width);
+                    var height = Convert.ToInt32(vSelectedImage.Height);
+                    if (!ckbWidth.Checked || !ckbHeight.Checked)
+                    {
+                        var imageBase = Image.FromFile(sBaseImagePath);
+                        if (ckbWidth.Checked)
+                        {
+                            height = width * imageBase.Height / imageBase.Width;
+                        }
+                        else
+                        {
+                            width = height * imageBase.Width / imageBase.Height;
+                        }
+                    }
+
+                    var vNewIMage = Scale(width, height, sBaseImagePath);
+
+
                     vNewIMage.Save(vNewImageName);
                     Logger.WriteVerbose("Created Image for {0} of UWP Images", vSelSize);
+                }
+
+
+                if (chkLstUwp.CheckedItems.Count > 0)
+                {
+                    var vSelectedImage = vUwpSizes.Last();
+
+                    Logger.WriteVerbose("Creating Image for last of UWP Images");
+                    var vNewImageName = vUwpPath + "\\" + vFileName + ".png";
+
+                    var width = Convert.ToInt32(vSelectedImage.Width);
+                    var height = Convert.ToInt32(vSelectedImage.Height);
+                    if (!ckbWidth.Checked || !ckbHeight.Checked)
+                    {
+                        var imageBase = Image.FromFile(sBaseImagePath);
+                        if (ckbWidth.Checked)
+                        {
+                            height = width * imageBase.Height / imageBase.Width;
+                        }
+                        else
+                        {
+                            width = height * imageBase.Width / imageBase.Height;
+                        }
+                    }
+
+                    var vNewIMage = Scale(width, height, sBaseImagePath);
+
+
+                    vNewIMage.Save(vNewImageName);
+                    Logger.WriteVerbose("Created Image for last of UWP Images");
                 }
 
                 lblUWPTitle.Visible = true;
@@ -273,5 +420,6 @@ namespace ReSizer
         public short Width { get; set; }
         public short Height { get; set; }
         public string Scale { get; set; }
+        public string Path { get; set; }
     }
- }
+}
